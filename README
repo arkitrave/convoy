@@ -1,0 +1,7 @@
+This is an experimental start at using a cross-domain iframe to communicate
+between web properties. It is non-functional in this folder structure, and
+no support is provided. This is a storage location for now, and may or may
+not eventually be usable code.
+
+All code is copyright (c) 2012 Gilt Groupe Holdings, Inc. except where
+otherwise noted. All Rights Reserved.
