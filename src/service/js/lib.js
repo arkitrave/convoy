@@ -1,3 +1,7 @@
+var Gilt;
+if (!Gilt) {
+  Gilt = {};
+}
 /*
     json2.js
     2008-01-17
@@ -1990,3 +1994,622 @@ define(function() {
     }
     // Boilerplate for AMD, Node, and browser global
 );
+
+
+/*jshint asi: false, bitwise: true, boss: false, curly: true, eqeqeq: true, eqnull: false, evil: false, forin: false, immed: true, laxbreak: false, newcap: true, noarg: true, noempty: true, nonew: false, nomen: false, onevar: true, plusplus: false, regexp: false, undef: true, sub: false, strict: false, white: false */
+/*jshint browser: true, maxerr: 50, passfail: false */
+/*global define: false, require: false */
+
+(function (root, require) {
+  var constructor = function () {
+    var
+      VERSION = "1.0.3",
+      notifications,
+      publish,
+      publishMany,
+      subscribe,
+      subscribeMany,
+      unsubscribe,
+      unsubscribeMany;
+
+    /**
+     * Stores the notifications which have been created
+     * @property notifications
+     * @private
+     */
+    notifications = {};
+
+    /**
+     * Publishes an event on a given channel
+     * @method  publish
+     * @public  as publish
+     * @param   {String} channel A channel on which to publish
+     * @param   {Array}  args    An array of arguments to be passed to the subscribers, or []
+     * @param   {Object} scope   Optional scope in which to execute the subscribers (defaults to window)
+     */
+    publish = function (channel, args, scope) {
+      scope = scope || window;
+      args  = args  || [];
+
+      if ('[object Array]' !== Object.prototype.toString.call(args)) {
+        args = [args];
+      }
+
+      var i;
+
+      if (notifications[channel]) {
+        for (i = 0; i < notifications[channel].length; i += 1) {
+          notifications[channel][i].apply(scope, args);
+        }
+      }
+    };
+
+    /**
+     * Publishes an event on given channels
+     * @method  publishMany
+     * @public  as publishMany
+     * @param   {Array}  channels An array of channels on which to publish
+     * @param   {Array}  args     An array of arguments to be passed to the subscribers, or []
+     * @param   {Object} scope    Optional scope in which to execute the subscribers (defaults to window)
+     */
+    publishMany = function (channels, args, scope) {
+      for (var i = 0; i < channels.length; i += 1) {
+        publish(channels[i], args, scope);
+      }
+    };
+
+    /**
+     * Subscribes a function to a given channel
+     * @method  subscribe
+     * @public  as subscribe
+     * @param   {String}   channel  A channel to which to listen
+     * @param   {Function} callback A function to be called when the subscribed event publishes
+     * @return  {Array}    A handle (for use by the client in unsubscribing to the event)
+     */
+    subscribe = function (channel, callback) {
+      if (!notifications[channel]) {
+        notifications[channel] = [];
+      }
+      notifications[channel].push(callback);
+      return [channel, callback];
+    };
+
+    /**
+     * Subscribes a function to given channels
+     * @method  subscribeMany
+     * @public  as subscribeMany
+     * @param   {Array}    channels An array of channels to which to listen
+     * @param   {Function} callback A function to be called when the subscribed event publishes
+     * @return  {Array}    An array of handles (for use by the client in unsubscribing to the event)
+     */
+    subscribeMany = function (channels, callback) {
+      var result = [], i;
+      for (i = 0; i < channels.length; i += 1) {
+        result.push(subscribe(channels[i], callback));
+      }
+      return result;
+    };
+
+    /**
+     * Unsubscribes a function from a given channel
+     * @method  unsubscribe
+     * @public  as unsubscribe
+     * @param   {Array} handle A channel/callback pair to unsubscribe
+     */
+    unsubscribe = function (handle) {
+      var
+        k = handle[0],
+        i;
+
+      if (notifications[k]) {
+        for (i = 0; i < notifications[k].length; i += 1) {
+          if (notifications[k][i] === handle[1]) {
+            notifications[k].splice(i, 1);
+          }
+        }
+      }
+    };
+
+    /**
+     * Unsubscribes a function from given channels
+     * @method  unsubscribeMany
+     * @public  as unsubscribeMany
+     * @param   {Array} handles An array of channel/callback pairs to unsubscribe
+     */
+    unsubscribeMany = function (handles) {
+      for (var i = 0; i < handles.length; i += 1) {
+        unsubscribe(handles[i]);
+      }
+    };
+
+    return {
+      version         : VERSION,
+      publish         : publish,
+      publishMany     : publishMany,
+      subscribe       : subscribe,
+      subscribeMany   : subscribeMany,
+      unsubscribe     : unsubscribe,
+      unsubscribeMany : unsubscribeMany
+    };
+  };
+
+  if (typeof require === 'function') {
+    define('modules/notify',
+           [],
+           constructor);
+  } else if (root) {
+    root.Notify = root.Notify || constructor();
+  }
+}(window.Gilt, (typeof require === 'function' && true) ? require : undefined)); // && true is a hack to allow rake to kill requirejs
+
+
+/*jshint asi: false, bitwise: true, boss: false, curly: true, eqeqeq: true, eqnull: false, evil: false, forin: false, immed: true, laxbreak: false, newcap: true, noarg: true, noempty: true, nonew: false, nomen: false, onevar: true, plusplus: false, regexp: false, undef: true, sub: false, strict: false, white: false */
+/*jshint browser: true, maxerr: 50, passfail: false */
+/*global define: false, require: false */
+
+(function (root, require) {
+  var constructor = function (notify, template) {
+    return function (id, label, options, view) {
+      var
+        VERSION = "1.1.2",
+        subscribers     = [],
+        container       = options.container || null,
+        services        = options.services || {},
+        getId,
+        getContainer,
+        getService,
+        getOption,
+        publish,
+        subscribe,
+        unsubscribe,
+        unsubscribeAll,
+        setState,
+        getView;
+
+      /**
+       * Publishes an internal event for this sandbox
+       * @method publish
+       * @param {String} channel The channel on which to publish
+       * @param {Array}  args    An array of arguments
+       * @param {Object} scope   Optional scope for the subscribers to be executed in
+       */
+      publish = function (channel, args, scope) {
+        notify.publish(id + '/' + channel, args, scope);
+      };
+
+      /**
+       * Subscribes to an event for this sandbox. The module's id prefix will
+       * be prepended, so passing in 'onSomething' creates a global subscription
+       * 'gilt-module-x/onSomething'
+       * @method subscribe
+       * @param  {String}   channel  The channel to subscribe to
+       * @param  {Function} callback The function to execute when the event publishes
+       * @return {Array}             A handle to reference this subscription later
+       */
+      subscribe = function (channel, callback) {
+        var
+          handle = notify.subscribe(id + '/' + channel, callback),
+          sandboxHandle = [handle[0].split(id + '/')[1], handle[1]];
+
+        subscribers.push(sandboxHandle);
+
+        return sandboxHandle;
+      };
+
+      /**
+       * Unsubscribes to a given internal module handle
+       * @method unsubscribe
+       * @param {Array} handle A handle returned by subscribe to unsubscribe to
+       */
+      unsubscribe = function (handle) {
+        notify.unsubscribe([id + '/' + handle[0], handle[1]]);
+      };
+
+      /**
+       * Shortcut to unsubscribe all listeners, used mainly when destroying a module
+       * @method unsubscribeAll
+       */
+      unsubscribeAll = function () {
+        var i;
+
+        for (i = 0; i < subscribers.length; i += 1) {
+          unsubscribe([subscribers[i][0], subscribers[i][1]]);
+        }
+      };
+
+      /**
+       * Gets this module's unique auto-generated identifier
+       * @method getId
+       * @return {String} The id of this module
+       */
+      getId = function () {
+        return id;
+      };
+
+      /**
+       * Gets the dom element container for this module, appending it to the
+       * dom or the element id provided by the sandbox if necessary.
+       * @method getContainer
+       * @return {Element} The dom element for this module
+       */
+      getContainer = function () {
+
+        if (container) {
+
+          if (!container.className.match(/gilt\-module/)) {
+            container.className += (container.className ? ' ' : '') + ' gilt-module gilt-module-' + label;
+          }
+
+          if (view && !container.className.match(/gilt\-view/)) {
+            container.className += (' gilt-view-' + options.view);
+          }
+
+          return container;
+        }
+
+        var el = getOption('el');
+
+        container = document.getElementById(id);
+
+        if (!container || !container.length) {
+
+          container = document.createElement('div');
+          container.id = id;
+          container.className = 'gilt-module gilt-module-' + label;
+
+          if (view) {
+            container.className += (' gilt-view-' + options.view);
+          }
+
+          if (el && document.getElementById(el)) {
+            document.getElementById(el).appendChild(container);
+          } else {
+            document.body.appendChild(container);
+          }
+        }
+
+        return container;
+      };
+
+      /**
+       * Gets a service provided by the core application
+       * TODO: Object detection for service existence
+       * @method getService
+       * @param  {String}  label The name of the service requested
+       * @return {Object}        A service provided by the core application
+       */
+      getService = function (label) {
+        switch (label) {
+        case 'query' :
+          return services.query || {};
+        case 'request' :
+          return services.query ? services.query.ajax || {} : {};
+        case 'underscore' :
+          return services.underscore ? services.underscore : window._ || {};
+        case 'template' :
+          return services.template || template;
+        default :
+          return services[label] || {};
+        }
+      };
+
+      /**
+       * Returns an option requested by the implementation for this module
+       * @method getOption
+       * @param  {String} option The option requested
+       * @return {Mixed}         The value of the requested option or false
+       */
+      getOption = function (option) {
+        if (options && typeof options[option] !== 'undefined') {
+          return options[option];
+        } else {
+          return false;
+        }
+      };
+
+      /**
+       * Gets the view for this module instance
+       * @method getView
+       * @private
+       * @return {Object} The view stored in this sandbox instance
+       */
+      getView = function () {
+        return view;
+      };
+
+      /**
+       * Sets the state of the module to the className of the module container,
+       * publishes the state change passing it the old and new states.
+       * @method setState
+       * @private
+       * @param {String} state The new class name state to set on the container's element
+       */
+      setState = function (state) {
+        var
+          container = getContainer(),
+          klass = container.className || '',
+          oldState = '',
+          stateRegex = /gilt\-state\-[\w\-]+/;
+
+        if (klass.match(stateRegex)) {
+          oldState = klass.match(stateRegex)[0].split('gilt-state-')[1];
+          klass = klass.replace(stateRegex, 'gilt-state-' + state);
+        } else {
+          klass = klass + (klass !== '' ? ' ' : '') + 'gilt-state-' + state;
+        }
+
+        container.className = klass;
+        publish('stateChanged', [oldState, state]);
+      };
+
+      this.version        = VERSION;
+      this.getId          = getId;
+      this.getContainer   = getContainer;
+      this.getService     = getService;
+      this.getOption      = getOption;
+      this.publish        = publish;
+      this.subscribe      = subscribe;
+      this.unsubscribe    = unsubscribe;
+      this.unsubscribeAll = unsubscribeAll;
+      this.setState       = setState;
+      this.getView        = getView;
+    };
+  };
+
+  if (typeof require === 'function') {
+    define('modules/sandbox',
+           ['modules/notify', 'modules/template'],
+           constructor);
+  } else if (root) {
+    root.Sandbox = root.Sandbox || constructor(root.Notify, root.Template);
+  }
+}(window.Gilt, (typeof require === 'function' && true) ? require : undefined)); // && true is a hack to allow rake to kill requirejs
+
+
+/*jshint asi: false, bitwise: true, boss: false, curly: true, eqeqeq: true, eqnull: false, evil: false, forin: false, immed: true, laxbreak: false, newcap: true, noarg: true, noempty: true, nonew: false, nomen: false, onevar: true, plusplus: false, regexp: false, undef: true, sub: false, strict: false, white: false */
+/*jshint browser: true, maxerr: 50, passfail: false */
+/*global define: false, require: false */
+
+(function (root, require) {
+  var constructor = function (Sandbox) {
+    var
+      VERSION        = "1.2.1",
+      cache          = {}, // Storage for all module instances
+      globalCounter  = 0,  // Keeps track of the count of Gilt widgets on the page
+      counterPrefix  = 'gilt-module',
+      getModuleById,
+      getModules,
+      filterCache,
+      register,
+      start,
+      stop,
+      startAll,
+      stopAll,
+      listModules,
+      registerView,
+      views        = {};
+
+    /**
+     * Returns the module with the given id
+     * @method  getModuleById
+     * @private
+     * @param   {String} moduleId The id of the module to return
+     * @return  {Object}          The module matching the given id
+     */
+    getModuleById = function (moduleId) {
+      return cache[moduleId] || {};
+    };
+
+    /**
+     * Returns an array of all registered modules with optional type filter
+     * @method  getModules
+     * @private
+     * @param   {String} label Optional type by which to filter (or null)
+     * @return  {Object}       An object containing all modules, modules matching the provided type or {}
+     */
+    getModules = function (label) {
+      var modules = {};
+
+      if (label) {
+        modules = filterCache(label);
+      } else {
+        modules = cache;
+      }
+
+      return modules;
+    };
+
+    /**
+     * Filters the cache by the provided named type
+     * @method  filterCache
+     * @private
+     * @param   {String} label A module label type to filter by
+     * @return  {Object}       An object containing modules of the requested label or {}
+     */
+    filterCache = function (label) {
+      var
+        module,
+        modules = {};
+
+      for (module in cache) {
+        if (cache[module].label === label) {
+          modules[module] = cache[module];
+        }
+      }
+
+      return modules;
+    };
+
+    /**
+     * Takes a module type label and creator and stores them in a module cache
+     * The creator must return create() and destroy() methods
+     * @method register
+     * @public as register
+     * @param  {String}   label     An name to be used as the dom element's class
+     * @param  {Function} creator   A creation function for a module
+     * @param  {Object}   options   Optional options to be provided to this module instance
+     * @return {String}             A unique ID for this particular module instance, so the implementation can start and stop the module
+     */
+    register = function (label, creator, options) {
+      globalCounter += 1;
+
+      // This isn't really ideal and I don't like it very much.
+      var
+        prefix = (options && options._counterPrefix) ? options._counterPrefix : counterPrefix,
+        moduleId = prefix + '-' + globalCounter;
+
+      if (options) {
+        delete options._counterPrefix;
+      }
+
+      cache[moduleId] = {
+        label    : label,
+        creator  : creator,
+        options  : options || {}, // why the hell did i make this null originally?
+        instance : null
+      };
+
+      return moduleId;
+    };
+
+    /**
+     * Starts a specific module by calling its create method and providing a sandbox
+     * @method start
+     * @public as start
+     * @param  {String}         moduleId An identifier to be used as the dom element's id
+     * @return {Object|Boolean}          The sandbox for this module instance or false
+     */
+    start = function (moduleId) {
+      var
+        module  = getModuleById(moduleId),
+        sandbox = null,
+        view    = null;
+
+      if (module.options.view) {
+        view = views[module.label][module.options.view];
+      }
+
+      if (module.creator) {
+        sandbox = new Sandbox(moduleId, module.label, module.options, view);
+        module.instance = module.creator(sandbox);
+        module.instance.create();
+      }
+
+      return sandbox || false;
+    };
+
+    /**
+     * Stops a specific module by calling its destroy method
+     * @method stop
+     * @public as stop
+     * @param  {String}   moduleId The module's identifier
+     */
+    stop = function (moduleId) {
+      var module = getModuleById(moduleId);
+
+      if (module.creator && module.instance) {
+        module.instance.destroy();
+        module.instance = null;
+      }
+    };
+
+    /**
+     * Starts all modules in the module cache, with optional type and number filter
+     * @method startAll
+     * @public as startAll
+     * @param  {String} label Optional module name filter
+     * @param  {Number} count Optional number of modules to start
+     * @return {Array}        An array containing objects with the moduleId and sandbox of all started modules
+     */
+    startAll = function (label, count) {
+      count = (typeof label === 'number' ? label : (count || null));
+
+      var
+        counter = 0,
+        moduleId,
+        modules = getModules(typeof label === 'string' ? label : null),
+        ret = [];
+
+      for (moduleId in modules) {
+        if (modules.hasOwnProperty(moduleId)) {
+          if (!modules[moduleId].instance && (counter < count || !count)) {
+            ret.push({ moduleId : moduleId, sandbox : start(moduleId) });
+            counter += 1;
+          }
+        }
+      }
+
+      return ret;
+    };
+
+    /**
+     * Stops all module instances in the module cache, with optional type filter
+     * @method stopAll
+     * @public as stopAll
+     * @param  {String} label Optional module name filter
+     */
+    stopAll = function (label) {
+      var
+        moduleId,
+        modules = getModules(label || null);
+
+      for (moduleId in modules) {
+        if (modules.hasOwnProperty(moduleId)) {
+          stop(moduleId);
+        }
+      }
+    };
+
+    /**
+     * Returns a list of all modules that are registered
+     * @method listModules
+     * @public as listModules
+     * @return {Array} An array of module names that are registed with Gilt.App
+     */
+    listModules = function () {
+      var
+        modules = getModules(),
+        i,
+        ret = [];
+
+      for (i in modules) {
+        ret.push(modules[i].label);
+      }
+
+      return ret;
+    };
+
+    /**
+     * Registers a view to be used by a module. Optional.
+     * @method registerView
+     * @public as view.register
+     * @param {String} label    The module label/type to associate this view with
+     * @param {String} viewName The name of this view
+     * @param {Object} view     The object containing the view methods and properties
+     */
+    registerView = function (label, viewName, view) {
+      views[label] = views[label] ? views[label] : {};
+      views[label][viewName] = view;
+    };
+
+    return {
+      version     : VERSION,
+      register    : register,
+      start       : start,
+      stop        : stop,
+      startAll    : startAll,
+      stopAll     : stopAll,
+      view        : {
+        register : registerView
+      }
+    };
+  };
+
+  if (typeof require === 'function') {
+    define('modules/app',
+           ['modules/sandbox'],
+           constructor);
+  } else if (root) {
+    root.App = root.App || constructor(root.Sandbox);
+  }
+}(window.Gilt, (typeof require === 'function' && true) ? require : undefined)); // && true is a hack to allow rake to kill requirejs

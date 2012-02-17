@@ -9,14 +9,12 @@
     <script src="js/commonsClient.js"></script>
     <script>
       Gilt.commonsClient.init();
-      Gilt.commonsClient.post('test', 'publish', ['I like turtles.']);
+      Gilt.commonsClient.post('test', 'publish', ['Turtle woman, yeah.']);
       setTimeout(function () {
-        Gilt.commonsClient.post('test', 'fetch');
+        Gilt.commonsClient.post('test', 'fetch', function (result) {
+          console.log(result);
+        });
       }, 5000);
-
-      Gilt.commonsClient.post('globalnav', 'setDataSet', ['women', 45]);
-      Gilt.commonsClient.post('globalnav', 'getDataSet', ['men']);
-      Gilt.commonsClient.post('globalnav', 'getDataSet', ['women']);
     </script>
   </body>
 </html>

@@ -2,14 +2,12 @@
  * @depend json2.js
  * @depend underscore.js
  * @depend when.js
- *
  * @depend notify.js
  * @depend app.js
  * @depend sandbox.js
  */
 
 // TODO: Add localStorage and sessionStorage interfaces.
-// TODO: Implement module framework
 
 var Gilt;
 if (!Gilt) {
@@ -33,10 +31,10 @@ Gilt.commons = Gilt.commons || (function () {
      * @type     {Array}
      * @private
      */
-    possibleServices = ['test', 'globalnav'],
+    possibleServices = ['test'],
 
     /**
-     * The object of loaded services
+     * The object of sandboxes for the loaded services
      * @property services
      * @type     {Object}
      * @private
@@ -62,7 +60,7 @@ Gilt.commons = Gilt.commons || (function () {
       } else if (typeof services[service] !== 'undefined') {
         deferred.resolve();
       } else {
-        script.src = 'http://localhost:8888/js/services/' + service + '.js';
+        script.src = 'http://localhost:8888/xd/js/services/' + service + '.js';
         script.type = 'text/javascript';
 
         script.onload = script.onreadystatechange = function () {
@@ -72,6 +70,7 @@ Gilt.commons = Gilt.commons || (function () {
           script.onload = script.onreadystatechange = null;
           head.removeChild(script);
           loaded = 1;
+          registerService(service);
           deferred.resolve();
         };
 
@@ -82,18 +81,19 @@ Gilt.commons = Gilt.commons || (function () {
     },
 
     /**
-     * Places a service reference into the object of loaded services
+     * Registers a loaded service with the app framework
      * @method registerService
      * @public as registerService
      * @param  {String} name    The name of the service being registered
-     * @param  {Object} service The given service's public API
      */
-    registerService = function (name, service) {
-      services[name] = service;
+    registerService = function (name) {
+      var id = Gilt.App.register(name, Gilt.commonsModules[name]);
+      services[name] = Gilt.App.start(id);
     },
 
     /**
-     * When a message is received from the client, passes the incoming data to the proper commons service
+     * When a message is received from the client, passes the incoming data
+     * and the deferred to be resolved into the appropriate commons service
      * @method handleData
      * @private
      * @param   {Object} data The event.data object of the incoming postMessage
@@ -104,8 +104,7 @@ Gilt.commons = Gilt.commons || (function () {
 
       loadService(data.service).then(
         function () {
-          var result = services[data.service][data.method].apply(this, data.params);
-          deferred.resolve(result);
+          services[data.service].publish('commonsRequest', [deferred, data]);
         },
 
         function () {

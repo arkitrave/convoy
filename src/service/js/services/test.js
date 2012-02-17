@@ -3,33 +3,93 @@ if (!Gilt) {
   Gilt = {};
 }
 
-(function () {
-  var test = (function () {
+Gilt.commonsModules = Gilt.commonsModules || {};
 
-    var
-      SERVICE_NAME = 'test',
-      hasLocalStorage = !!window.localStorage,
-      commons = Gilt.commons,
+Gilt.commonsModules.test = function (sandbox) {
+  var
 
-      publish = function (message) {
+    /**
+     * The name of this service
+     * @const SERVICE_NAME
+     * @private
+     */
+    SERVICE_NAME = 'test',
+
+    /**
+     * Whether the user has local storage
+     * @property hasLocalStorage
+     * @private
+     */
+    hasLocalStorage = !!window.localStorage,
+
+    /**
+     * The methods available to the client API
+     * @property methods
+     * @private
+     */
+    methods = {
+
+      /**
+       * Places a message into local storage
+       * @method publish
+       * @private
+       * @param   {String} message A message to store
+       */
+      publish : function (message) {
         if (hasLocalStorage) {
           window.localStorage.setItem(SERVICE_NAME, message);
         }
-        return message;
       },
 
-      fetch = function () {
+      /**
+       * Retrieves a message from local storage
+       * @method fetch
+       * @private
+       * @return  {String} The requested item from local storage
+       */
+      fetch : function () {
         if (hasLocalStorage) {
-          var result = window.localStorage.getItem(SERVICE_NAME);
-          return result;
+          return window.localStorage.getItem(SERVICE_NAME);
         }
-      };
+      }
+    },
 
-    return {
-      publish : publish,
-      fetch : fetch
-    }
-  }());
+    /**
+     * Default handler for all incoming pubsub requests
+     * @method handleRequest
+     * @private
+     * @param   {Object} deferred The deferred that this module is responsible for resolving
+     * @param   {Object} data     The data that contains the method and params for this request
+     */
+    handleRequest = function (deferred, data) {
+      var result = '';
 
-  Gilt.commons.registerService('test', test);
-}());
+      if (typeof methods[data.method] === 'function') {
+        result = methods[data.method].apply(this, data.params);
+        deferred.resolve(result);
+      }
+    },
+
+    /**
+     * Creates.
+     * @method create
+     * @public as create
+     */
+    create = function () {
+      sandbox.subscribe('commonsRequest', handleRequest);
+    },
+
+    /**
+     * Destroys.
+     * @method destroy
+     * @public as destroy
+     */
+    destroy = function () {
+      //console.log('destroyed');
+    };
+
+  return {
+    create : create,
+    destroy : destroy
+  };
+};
