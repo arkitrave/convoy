@@ -5,16 +5,11 @@
     <title>Convoy Client</title>
   </head>
   <body>
-    <h1>Convoy Client</h1>
-    <script src="js/commonsClient.js"></script>
+    <h1>Convoy Client Example</h1>
     <script>
-      Gilt.commonsClient.init();
-      Gilt.commonsClient.post('test', 'publish', ['Turtle woman, yeah.']);
-      setTimeout(function () {
-        Gilt.commonsClient.post('test', 'fetch', function (result) {
-          console.log(result);
-        });
-      }, 5000);
+      requireModules(['x_domain.client'], function (x) {
+        x.post('appName', 'methodName', [params], callback);
+      }); 
     </script>
   </body>
 </html>
